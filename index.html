@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Catatan Pemasangan Jaringan</title>
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --border-color: #dee2e6;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .header h2 {
+            margin-bottom: 5px;
+            font-size: 22px;
+        }
+        .header p {
+            margin-top: 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .header-table {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .header-table h3 {
+            margin: 0;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-export {
+            background-color: var(--success-color);
+            width: auto;
+            font-size: 13px;
+        }
+        .btn-reset {
+            background-color: var(--warning-color);
+            color: #000;
+            width: auto;
+            font-size: 13px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table th, table td {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+            font-size: 13px;
+        }
+        table th {
+            background-color: var(--primary-color);
+            color: white;
+            white-space: nowrap;
+        }
+        table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+            padding: 5px 10px;
+            font-size: 12px;
+            width: auto;
+        }
+        
+        /* CSS Khusus Layar HP */
+        @media (max-width: 600px) {
+            .grid-2 {
+                grid-template-columns: 1fr; /* Kolom jadi ke bawah di HP */
+                gap: 0px;
+            }
+            .header-table {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+            .btn-export, .btn-reset {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>Sistem Catatan Pemasangan</h2>
+        <p>Formulir Pendataan Instalasi Pelanggan Baru</p>
+    </div>
+
+    <!-- Form Input -->
+    <div class="card">
+        <form id="formPemasangan">
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="tanggal">Tanggal Pemasangan</label>
+                    <input type="date" id="tanggal" required>
+                </div>
+                <div class="form-group">
+                    <label for="team">Nama Team / Teknisi</label>
+                    <input type="text" id="team" placeholder="Contoh: nama team" required>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="nama">Nama Pelanggan</label>
+                    <input type="text" id="nama" placeholder="Contoh: Nama Sesuai Ktp" required>
+                </div>
+                <div class="form-group">
+                    <label for="hp">No. HP</label>
+                    <input type="tel" id="hp" placeholder="Contoh: No Telepon" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="alamat">Alamat Lengkap</label>
+                <textarea id="alamat" rows="2" placeholder="Contoh: Alamat" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="pppoe">Akun PPPoE</label>
+                <input type="text" id="pppoe" placeholder="Contoh: Nama PPPOE" required>
+            </div>
+
+            <button type="submit">Simpan Catatan Pemasangan</button>
+        </form>
+    </div>
+
+    <!-- Tabel Data -->
+    <div class="card">
+        <div class="header-table">
+            <h3>Daftar Pemasangan</h3>
+            <div class="btn-group">
+                <button type="button" class="btn-reset" id="btnReset">Reset Data Bulanan</button>
+                <button type="button" class="btn-export" id="btnExport">📥 Export ke Excel</button>
+            </div>
+        </div>
+        <div style="overflow-x: auto;">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Team</th>
+                        <th>Nama</th>
+                        <th>No. HP</th>
+                        <th>Alamat</th>
+                        <th>PPPoE</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data akan muncul di sini -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Inisialisasi array data dari Local Storage
+    let dataPemasangan = JSON.parse(localStorage.getItem('catatanPemasangan')) || [];
+
+    // Mengambil elemen HTML
+    const form = document.getElementById('formPemasangan');
+    const tableBody = document.getElementById('tableBody');
+    const inputTanggal = document.getElementById('tanggal');
+
+    // Set default tanggal form hari ini
+    const hariIni = new Date();
+    // Menyesuaikan zona waktu lokal (WIB) agar tidak geser hari
+    hariIni.setMinutes(hariIni.getMinutes() - hariIni.getTimezoneOffset());
+    inputTanggal.value = hariIni.toISOString().split('T')[0];
+
+    // Fungsi untuk menampilkan data ke dalam tabel
+    function renderTable() {
+        tableBody.innerHTML = '';
+        dataPemasangan.forEach((data, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${data.tanggal}</td>
+                <td><strong>${data.team}</strong></td>
+                <td>${data.nama}</td>
+                <td>${data.hp}</td>
+                <td>${data.alamat}</td>
+                <td><code>${data.pppoe}</code></td>
+                <td><button class="btn-delete" onclick="hapusData(${index})">Hapus</button></td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // Fungsi untuk menyimpan data baru
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Mengubah format YYYY-MM-DD dari input date menjadi DD/MM/YYYY (Contoh: 20/8/2026)
+        const dateValue = inputTanggal.value;
+        const [tahun, bulan, hari] = dateValue.split('-');
+        const formatTanggalID = `${parseInt(hari)}/${parseInt(bulan)}/${tahun}`;
+
+        // Mengambil nilai dari form
+        const newData = {
+            tanggal: formatTanggalID,
+            team: document.getElementById('team').value.toUpperCase(),
+            nama: document.getElementById('nama').value.toUpperCase(),
+            hp: document.getElementById('hp').value,
+            alamat: document.getElementById('alamat').value.toUpperCase(),
+            pppoe: document.getElementById('pppoe').value
+        };
+
+        // Menambahkan ke array dan menyimpan ke local storage
+        dataPemasangan.push(newData);
+        localStorage.setItem('catatanPemasangan', JSON.stringify(dataPemasangan));
+
+        // Bersihkan form text, tapi biarkan tanggal tetap di hari ini
+        document.getElementById('team').value = '';
+        document.getElementById('nama').value = '';
+        document.getElementById('hp').value = '';
+        document.getElementById('alamat').value = '';
+        document.getElementById('pppoe').value = '';
+        
+        renderTable();
+    });
+
+    // Fungsi untuk menghapus baris data satuan
+    function hapusData(index) {
+        if(confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+            dataPemasangan.splice(index, 1);
+            localStorage.setItem('catatanPemasangan', JSON.stringify(dataPemasangan));
+            renderTable();
+        }
+    }
+
+    // FITUR EXPORT KE EXCEL (CSV)
+    document.getElementById('btnExport').addEventListener('click', function() {
+        if(dataPemasangan.length === 0) {
+            alert('Tidak ada data untuk diekspor!');
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        // Header Kolom
+        csvContent += "Tanggal,Team,Nama Pelanggan,No HP,Alamat,Akun PPPoE\n";
+
+        // Looping Data
+        dataPemasangan.forEach(function(row) {
+            let rowData = [
+                `"${row.tanggal}"`,
+                `"${row.team}"`,
+                `"${row.nama}"`,
+                `"${row.hp}"`,
+                `"${row.alamat}"`,
+                `"${row.pppoe}"`
+            ];
+            csvContent += rowData.join(",") + "\n";
+        });
+
+        // Proses Download
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        
+        const stringTanggal = new Date().toLocaleDateString('id-ID').replace(/\//g, '-');
+        link.setAttribute("download", `Rekap_Pemasangan_${stringTanggal}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // FITUR RESET DATA BULANAN
+    document.getElementById('btnReset').addEventListener('click', function() {
+        if(dataPemasangan.length === 0) {
+            alert('Data sudah kosong.');
+            return;
+        }
+        
+        const konfirmasi = confirm('PENTING: Apakah Anda sudah melakukan Export ke Excel?\n\nTindakan ini akan MENGHAPUS SEMUA DATA di tabel untuk memulai bulan baru. Lanjutkan?');
+        
+        if(konfirmasi) {
+            dataPemasangan = [];
+            localStorage.removeItem('catatanPemasangan');
+            renderTable();
+            alert('Data berhasil di-reset. Siap untuk catatan bulan baru!');
+        }
+    });
+
+    // Tampilkan data saat halaman pertama dimuat
+    renderTable();
+</script>
+
+</body>
+</html>
