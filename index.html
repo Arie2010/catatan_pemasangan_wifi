@@ -136,7 +136,7 @@
         /* CSS Khusus Layar HP */
         @media (max-width: 600px) {
             .grid-2 {
-                grid-template-columns: 1fr; /* Kolom jadi ke bawah di HP */
+                grid-template-columns: 1fr;
                 gap: 0px;
             }
             .header-table {
@@ -151,6 +151,8 @@
             }
         }
     </style>
+    <!-- Library untuk mengambil gambar dari HTML -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -171,42 +173,42 @@
                 </div>
                 <div class="form-group">
                     <label for="team">Nama Team / Teknisi</label>
-                    <input type="text" id="team" placeholder="Contoh: nama team" required>
+                    <input type="text" id="team" placeholder="Nama Team" required>
                 </div>
             </div>
             
             <div class="grid-2">
                 <div class="form-group">
                     <label for="nama">Nama Pelanggan</label>
-                    <input type="text" id="nama" placeholder="Contoh: Nama Sesuai Ktp" required>
+                    <input type="text" id="nama" placeholder="Nama Sesuai KTP" required>
                 </div>
                 <div class="form-group">
                     <label for="hp">No. HP</label>
-                    <input type="tel" id="hp" placeholder="Contoh: No Telepon" required>
+                    <input type="tel" id="hp" placeholder="No telepon" required>
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="alamat">Alamat Lengkap</label>
-                <textarea id="alamat" rows="2" placeholder="Contoh: Alamat" required></textarea>
+                <textarea id="alamat" rows="2" placeholder="Alamat" required></textarea>
             </div>
 
             <div class="form-group">
                 <label for="pppoe">Akun PPPoE</label>
-                <input type="text" id="pppoe" placeholder="Contoh: Nama PPPOE" required>
+                <input type="text" id="pppoe" placeholder="Nama PPPOE" required>
             </div>
 
             <button type="submit">Simpan Catatan Pemasangan</button>
         </form>
     </div>
 
-    <!-- Tabel Data -->
-    <div class="card">
+    <!-- Tabel Data (Area ini yang akan diubah jadi gambar) -->
+    <div class="card" id="areaCetak">
         <div class="header-table">
             <h3>Daftar Pemasangan</h3>
-            <div class="btn-group">
+            <div class="btn-group" id="tombolAksi">
                 <button type="button" class="btn-reset" id="btnReset">Reset Data Bulanan</button>
-                <button type="button" class="btn-export" id="btnExport">📥 Export ke Excel</button>
+                <button type="button" class="btn-export" id="btnExportImage">📸 Export ke Gambar</button>
             </div>
         </div>
         <div style="overflow-x: auto;">
@@ -219,7 +221,8 @@
                         <th>No. HP</th>
                         <th>Alamat</th>
                         <th>PPPoE</th>
-                        <th>Aksi</th>
+                        <!-- Tambahan class khusus agar bisa disembunyikan saat cetak -->
+                        <th class="kolom-aksi">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -231,21 +234,16 @@
 </div>
 
 <script>
-    // Inisialisasi array data dari Local Storage
     let dataPemasangan = JSON.parse(localStorage.getItem('catatanPemasangan')) || [];
 
-    // Mengambil elemen HTML
     const form = document.getElementById('formPemasangan');
     const tableBody = document.getElementById('tableBody');
     const inputTanggal = document.getElementById('tanggal');
 
-    // Set default tanggal form hari ini
     const hariIni = new Date();
-    // Menyesuaikan zona waktu lokal (WIB) agar tidak geser hari
     hariIni.setMinutes(hariIni.getMinutes() - hariIni.getTimezoneOffset());
     inputTanggal.value = hariIni.toISOString().split('T')[0];
 
-    // Fungsi untuk menampilkan data ke dalam tabel
     function renderTable() {
         tableBody.innerHTML = '';
         dataPemasangan.forEach((data, index) => {
@@ -257,22 +255,19 @@
                 <td>${data.hp}</td>
                 <td>${data.alamat}</td>
                 <td><code>${data.pppoe}</code></td>
-                <td><button class="btn-delete" onclick="hapusData(${index})">Hapus</button></td>
+                <td class="kolom-aksi"><button class="btn-delete" onclick="hapusData(${index})">Hapus</button></td>
             `;
             tableBody.appendChild(tr);
         });
     }
 
-    // Fungsi untuk menyimpan data baru
     form.addEventListener('submit', function(e) {
         e.preventDefault();
 
-        // Mengubah format YYYY-MM-DD dari input date menjadi DD/MM/YYYY (Contoh: 20/8/2026)
         const dateValue = inputTanggal.value;
         const [tahun, bulan, hari] = dateValue.split('-');
         const formatTanggalID = `${parseInt(hari)}/${parseInt(bulan)}/${tahun}`;
 
-        // Mengambil nilai dari form
         const newData = {
             tanggal: formatTanggalID,
             team: document.getElementById('team').value.toUpperCase(),
@@ -282,11 +277,9 @@
             pppoe: document.getElementById('pppoe').value
         };
 
-        // Menambahkan ke array dan menyimpan ke local storage
         dataPemasangan.push(newData);
         localStorage.setItem('catatanPemasangan', JSON.stringify(dataPemasangan));
 
-        // Bersihkan form text, tapi biarkan tanggal tetap di hari ini
         document.getElementById('team').value = '';
         document.getElementById('nama').value = '';
         document.getElementById('hp').value = '';
@@ -296,7 +289,6 @@
         renderTable();
     });
 
-    // Fungsi untuk menghapus baris data satuan
     function hapusData(index) {
         if(confirm('Apakah Anda yakin ingin menghapus data ini?')) {
             dataPemasangan.splice(index, 1);
@@ -305,51 +297,62 @@
         }
     }
 
-    // FITUR EXPORT KE EXCEL (CSV)
-    document.getElementById('btnExport').addEventListener('click', function() {
+    // FITUR EXPORT KE GAMBAR (PNG)
+    document.getElementById('btnExportImage').addEventListener('click', function() {
         if(dataPemasangan.length === 0) {
             alert('Tidak ada data untuk diekspor!');
             return;
         }
 
-        let csvContent = "data:text/csv;charset=utf-8,";
-        // Header Kolom
-        csvContent += "Tanggal,Team,Nama Pelanggan,No HP,Alamat,Akun PPPoE\n";
+        // Ubah teks tombol menjadi indikator loading
+        const btnExport = document.getElementById('btnExportImage');
+        const teksAsli = btnExport.innerHTML;
+        btnExport.innerHTML = 'Memproses Gambar...';
 
-        // Looping Data
-        dataPemasangan.forEach(function(row) {
-            let rowData = [
-                `"${row.tanggal}"`,
-                `"${row.team}"`,
-                `"${row.nama}"`,
-                `"${row.hp}"`,
-                `"${row.alamat}"`,
-                `"${row.pppoe}"`
-            ];
-            csvContent += rowData.join(",") + "\n";
+        // 1. Sembunyikan tombol-tombol dan kolom aksi (hapus) agar gambar terlihat rapi
+        document.getElementById('tombolAksi').style.display = 'none';
+        const semuaKolomAksi = document.querySelectorAll('.kolom-aksi');
+        semuaKolomAksi.forEach(el => el.style.display = 'none');
+
+        // 2. Tentukan area yang mau dijadikan gambar (Card Tabel)
+        const areaCetak = document.getElementById('areaCetak');
+
+        // 3. Proses pembuatan gambar
+        html2canvas(areaCetak, {
+            scale: 2, // Menggunakan skala 2 agar hasil gambar HD dan tidak pecah saat di-zoom
+            backgroundColor: "#ffffff" // Background putih bersih
+        }).then(canvas => {
+            // 4. Kembalikan tampilan tombol dan kolom aksi seperti semula
+            document.getElementById('tombolAksi').style.display = 'flex';
+            semuaKolomAksi.forEach(el => el.style.display = '');
+            btnExport.innerHTML = teksAsli;
+
+            // 5. Buat file download-nya
+            const stringTanggal = new Date().toLocaleDateString('id-ID').replace(/\//g, '-');
+            const link = document.createElement("a");
+            link.download = `Rekap_Pemasangan_${stringTanggal}.png`; // Format .png
+            link.href = canvas.toDataURL("image/png");
+            
+            // Klik link secara otomatis untuk mendownload
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }).catch(err => {
+            alert("Terjadi kesalahan saat memproses gambar.");
+            // Kembalikan tampilan jika error
+            document.getElementById('tombolAksi').style.display = 'flex';
+            semuaKolomAksi.forEach(el => el.style.display = '');
+            btnExport.innerHTML = teksAsli;
         });
-
-        // Proses Download
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        
-        const stringTanggal = new Date().toLocaleDateString('id-ID').replace(/\//g, '-');
-        link.setAttribute("download", `Rekap_Pemasangan_${stringTanggal}.csv`);
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     });
 
-    // FITUR RESET DATA BULANAN
     document.getElementById('btnReset').addEventListener('click', function() {
         if(dataPemasangan.length === 0) {
             alert('Data sudah kosong.');
             return;
         }
         
-        const konfirmasi = confirm('PENTING: Apakah Anda sudah melakukan Export ke Excel?\n\nTindakan ini akan MENGHAPUS SEMUA DATA di tabel untuk memulai bulan baru. Lanjutkan?');
+        const konfirmasi = confirm('PENTING: Apakah Anda sudah menyimpan gambarnya?\n\nTindakan ini akan MENGHAPUS SEMUA DATA di tabel untuk memulai bulan baru. Lanjutkan?');
         
         if(konfirmasi) {
             dataPemasangan = [];
@@ -359,7 +362,6 @@
         }
     });
 
-    // Tampilkan data saat halaman pertama dimuat
     renderTable();
 </script>
 
