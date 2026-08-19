@@ -151,7 +151,6 @@
             }
         }
     </style>
-    <!-- Library untuk mengambil gambar dari HTML -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
@@ -165,7 +164,6 @@
     <!-- Form Input -->
     <div class="card">
         <form id="formPemasangan">
-            
             <div class="grid-2">
                 <div class="form-group">
                     <label for="tanggal">Tanggal Pemasangan</label>
@@ -173,7 +171,7 @@
                 </div>
                 <div class="form-group">
                     <label for="team">Nama Team / Teknisi</label>
-                    <input type="text" id="team" placeholder="Nama Team" required>
+                    <input type="text" id="team" placeholder="Nama team" required>
                 </div>
             </div>
             
@@ -190,19 +188,19 @@
 
             <div class="form-group">
                 <label for="alamat">Alamat Lengkap</label>
-                <textarea id="alamat" rows="2" placeholder="Alamat" required></textarea>
+                <textarea id="alamat" rows="2" placeholder="Contoh: Alamat" required></textarea>
             </div>
 
             <div class="form-group">
                 <label for="pppoe">Akun PPPoE</label>
-                <input type="text" id="pppoe" placeholder="Nama PPPOE" required>
+                <input type="text" id="pppoe" placeholder="Contoh: nama PPPOE" required>
             </div>
 
             <button type="submit">Simpan Catatan Pemasangan</button>
         </form>
     </div>
 
-    <!-- Tabel Data (Area ini yang akan diubah jadi gambar) -->
+    <!-- Tabel Data -->
     <div class="card" id="areaCetak">
         <div class="header-table">
             <h3>Daftar Pemasangan</h3>
@@ -211,7 +209,8 @@
                 <button type="button" class="btn-export" id="btnExportImage">📸 Export ke Gambar</button>
             </div>
         </div>
-        <div style="overflow-x: auto;">
+        <!-- Wrapper tabel yang dimodifikasi untuk fix gambar -->
+        <div id="tableWrapper" style="overflow-x: auto;">
             <table id="dataTable">
                 <thead>
                     <tr>
@@ -221,7 +220,6 @@
                         <th>No. HP</th>
                         <th>Alamat</th>
                         <th>PPPoE</th>
-                        <!-- Tambahan class khusus agar bisa disembunyikan saat cetak -->
                         <th class="kolom-aksi">Aksi</th>
                     </tr>
                 </thead>
@@ -297,49 +295,57 @@
         }
     }
 
-    // FITUR EXPORT KE GAMBAR (PNG)
+    // UPDATE: PERBAIKAN FITUR EXPORT AGAR TABEL TIDAK TERPOTONG
     document.getElementById('btnExportImage').addEventListener('click', function() {
         if(dataPemasangan.length === 0) {
             alert('Tidak ada data untuk diekspor!');
             return;
         }
 
-        // Ubah teks tombol menjadi indikator loading
         const btnExport = document.getElementById('btnExportImage');
         const teksAsli = btnExport.innerHTML;
         btnExport.innerHTML = 'Memproses Gambar...';
 
-        // 1. Sembunyikan tombol-tombol dan kolom aksi (hapus) agar gambar terlihat rapi
         document.getElementById('tombolAksi').style.display = 'none';
         const semuaKolomAksi = document.querySelectorAll('.kolom-aksi');
         semuaKolomAksi.forEach(el => el.style.display = 'none');
 
-        // 2. Tentukan area yang mau dijadikan gambar (Card Tabel)
         const areaCetak = document.getElementById('areaCetak');
+        const tableWrapper = document.getElementById('tableWrapper');
 
-        // 3. Proses pembuatan gambar
+        // Simpan setelan awal CSS
+        const originalOverflow = tableWrapper.style.overflowX;
+        const originalWidth = areaCetak.style.width;
+
+        // Buka batas layar tabel sementara agar memanjang secara penuh
+        tableWrapper.style.overflowX = 'visible';
+        areaCetak.style.width = tableWrapper.scrollWidth + 'px'; 
+
         html2canvas(areaCetak, {
-            scale: 2, // Menggunakan skala 2 agar hasil gambar HD dan tidak pecah saat di-zoom
-            backgroundColor: "#ffffff" // Background putih bersih
+            scale: 2,
+            backgroundColor: "#ffffff"
         }).then(canvas => {
-            // 4. Kembalikan tampilan tombol dan kolom aksi seperti semula
+            // Kembalikan ke tampilan normal setelah difoto
+            tableWrapper.style.overflowX = originalOverflow;
+            areaCetak.style.width = originalWidth;
+            
             document.getElementById('tombolAksi').style.display = 'flex';
             semuaKolomAksi.forEach(el => el.style.display = '');
             btnExport.innerHTML = teksAsli;
 
-            // 5. Buat file download-nya
             const stringTanggal = new Date().toLocaleDateString('id-ID').replace(/\//g, '-');
             const link = document.createElement("a");
-            link.download = `Rekap_Pemasangan_${stringTanggal}.png`; // Format .png
+            link.download = `Rekap_Pemasangan_${stringTanggal}.png`;
             link.href = canvas.toDataURL("image/png");
             
-            // Klik link secara otomatis untuk mendownload
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }).catch(err => {
             alert("Terjadi kesalahan saat memproses gambar.");
-            // Kembalikan tampilan jika error
+            // Pastikan jika ada error, tampilan tetap kembali normal
+            tableWrapper.style.overflowX = originalOverflow;
+            areaCetak.style.width = originalWidth;
             document.getElementById('tombolAksi').style.display = 'flex';
             semuaKolomAksi.forEach(el => el.style.display = '');
             btnExport.innerHTML = teksAsli;
