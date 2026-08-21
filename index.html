@@ -104,6 +104,25 @@
             color: var(--primary-color);
             margin-top: 5px;
         }
+        
+        /* CSS Untuk Fitur Pencarian */
+        .search-box {
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--primary-color);
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .search-box input:focus {
+            box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
+        }
+
         .btn-group {
             display: flex;
             gap: 10px;
@@ -242,6 +261,12 @@
                 <button type="button" class="btn-export" id="btnExportImage">📸 Export ke Gambar</button>
             </div>
         </div>
+
+        <!-- Kolom Pencarian Baru -->
+        <div class="search-box" id="areaPencarian">
+            <input type="text" id="searchInput" placeholder="🔍 Ketik nama Team, Pelanggan, atau Alamat untuk mencari...">
+        </div>
+
         <div id="tableWrapper" style="overflow-x: auto;">
             <table id="dataTable">
                 <thead>
@@ -271,19 +296,59 @@
     const tableBody = document.getElementById('tableBody');
     const inputTanggal = document.getElementById('tanggal');
     const btnSubmit = document.getElementById('btnSubmit');
-    const totalCounter = document.getElementById('totalCounter'); // Elemen counter
+    const totalCounter = document.getElementById('totalCounter'); 
+    const searchInput = document.getElementById('searchInput');
 
     const hariIni = new Date();
     hariIni.setMinutes(hariIni.getMinutes() - hariIni.getTimezoneOffset());
     inputTanggal.value = hariIni.toISOString().split('T')[0];
 
+    // FUNGSI UNTUK MENGURUTKAN TANGGAL (Auto Sort)
+    function sortData() {
+        dataPemasangan.sort((a, b) => {
+            // Memecah format DD/MM/YYYY
+            const [hariA, bulanA, tahunA] = a.tanggal.split('/');
+            const [hariB, bulanB, tahunB] = b.tanggal.split('/');
+            
+            // Mengubah menjadi objek Date untuk dibandingkan
+            const dateA = new Date(tahunA, bulanA - 1, hariA);
+            const dateB = new Date(tahunB, bulanB - 1, hariB);
+            
+            return dateA - dateB; // Urutan dari tanggal paling lama ke baru (Ascending)
+        });
+    }
+
     function renderTable() {
         tableBody.innerHTML = '';
         
-        // Update angka counter
-        totalCounter.innerHTML = `Total: ${dataPemasangan.length} Pelanggan`;
+        // Mengambil teks pencarian
+        const keyword = searchInput.value.toLowerCase();
 
-        dataPemasangan.forEach((data, index) => {
+        // Menyimpan index asli agar fitur Edit/Hapus tidak salah sasaran saat difilter
+        let dataTampil = dataPemasangan.map((data, index) => {
+            return { ...data, indexAsli: index };
+        });
+
+        // Proses filtering (Pencarian)
+        if (keyword) {
+            dataTampil = dataTampil.filter(data => {
+                return data.team.toLowerCase().includes(keyword) || 
+                       data.nama.toLowerCase().includes(keyword) || 
+                       data.alamat.toLowerCase().includes(keyword);
+            });
+            // Update warna counter jika sedang mencari
+            totalCounter.innerHTML = `Pencarian: ${dataTampil.length} Pelanggan`;
+            totalCounter.style.backgroundColor = 'var(--warning-color)';
+            totalCounter.style.color = '#000';
+        } else {
+            // Tampilan normal
+            totalCounter.innerHTML = `Total: ${dataPemasangan.length} Pelanggan`;
+            totalCounter.style.backgroundColor = '#e9ecef';
+            totalCounter.style.color = 'var(--primary-color)';
+        }
+
+        // Render baris tabel berdasarkan data yang sudah difilter
+        dataTampil.forEach((data) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${data.tanggal}</td>
@@ -294,14 +359,17 @@
                 <td><code>${data.pppoe}</code></td>
                 <td class="kolom-aksi">
                     <div class="btn-aksi">
-                        <button type="button" class="btn-edit" onclick="editData(${index})">Edit</button>
-                        <button type="button" class="btn-delete" onclick="hapusData(${index})">Hapus</button>
+                        <button type="button" class="btn-edit" onclick="editData(${data.indexAsli})">Edit</button>
+                        <button type="button" class="btn-delete" onclick="hapusData(${data.indexAsli})">Hapus</button>
                     </div>
                 </td>
             `;
             tableBody.appendChild(tr);
         });
     }
+
+    // Event saat mengetik di kotak pencarian
+    searchInput.addEventListener('input', renderTable);
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -328,6 +396,10 @@
             btnSubmit.style.backgroundColor = 'var(--primary-color)';
         }
 
+        // Jalankan pengurutan tanggal otomatis setelah data masuk/diedit
+        sortData();
+
+        // Simpan ke local storage
         localStorage.setItem('catatanPemasangan', JSON.stringify(dataPemasangan));
 
         document.getElementById('team').value = '';
@@ -367,7 +439,6 @@
     function hapusData(index) {
         if(confirm('Apakah Anda yakin ingin menghapus data ini?')) {
             dataPemasangan.splice(index, 1);
-            localStorage.setItem('catatanPemasangan', JSON.stringify(dataPemasangan));
             
             if(editIndex === index) {
                 editIndex = -1;
@@ -377,6 +448,8 @@
                 inputTanggal.value = hariIni.toISOString().split('T')[0];
             }
             
+            // Simpan perubahan ke storage
+            localStorage.setItem('catatanPemasangan', JSON.stringify(dataPemasangan));
             renderTable();
         }
     }
@@ -392,7 +465,10 @@
         const teksAsli = btnExport.innerHTML;
         btnExport.innerHTML = 'Memproses Gambar...';
 
+        // Sembunyikan elemen yang tidak perlu saat difoto (tombol & kotak pencarian)
         document.getElementById('tombolAksi').style.display = 'none';
+        document.getElementById('areaPencarian').style.display = 'none';
+        
         const semuaKolomAksi = document.querySelectorAll('.kolom-aksi');
         semuaKolomAksi.forEach(el => el.style.display = 'none');
 
@@ -409,10 +485,12 @@
             scale: 2,
             backgroundColor: "#ffffff"
         }).then(canvas => {
+            // Kembalikan ke normal
             tableWrapper.style.overflowX = originalOverflow;
             areaCetak.style.width = originalWidth;
             
             document.getElementById('tombolAksi').style.display = 'flex';
+            document.getElementById('areaPencarian').style.display = 'block';
             semuaKolomAksi.forEach(el => el.style.display = '');
             btnExport.innerHTML = teksAsli;
 
@@ -429,6 +507,7 @@
             tableWrapper.style.overflowX = originalOverflow;
             areaCetak.style.width = originalWidth;
             document.getElementById('tombolAksi').style.display = 'flex';
+            document.getElementById('areaPencarian').style.display = 'block';
             semuaKolomAksi.forEach(el => el.style.display = '');
             btnExport.innerHTML = teksAsli;
         });
@@ -445,11 +524,17 @@
         if(konfirmasi) {
             dataPemasangan = [];
             localStorage.removeItem('catatanPemasangan');
+            
+            // Bersihkan teks pencarian juga jika ada
+            searchInput.value = '';
+            
             renderTable();
             alert('Data berhasil di-reset. Siap untuk catatan bulan baru!');
         }
     });
 
+    // Jalankan sortir dan render saat halaman pertama kali dibuka
+    sortData();
     renderTable();
 </script>
 
