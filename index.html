@@ -12,6 +12,7 @@
             --border-color: #dee2e6;
             --success-color: #198754;
             --warning-color: #ffc107;
+            --info-color: #0dcaf0;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -93,6 +94,16 @@
         .header-table h3 {
             margin: 0;
         }
+        .counter-badge {
+            display: inline-block;
+            background-color: #e9ecef;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 5px;
+        }
         .btn-group {
             display: flex;
             gap: 10px;
@@ -126,10 +137,26 @@
         table tr:nth-child(even) {
             background-color: #f2f2f2;
         }
+        .btn-aksi {
+            display: flex;
+            gap: 5px;
+        }
         .btn-delete {
             background-color: #dc3545;
             padding: 5px 10px;
             font-size: 12px;
+            border-radius: 4px;
+            color: white;
+            border: none;
+            width: auto;
+        }
+        .btn-edit {
+            background-color: var(--success-color);
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            color: white;
+            border: none;
             width: auto;
         }
         
@@ -142,6 +169,9 @@
             .header-table {
                 flex-direction: column;
                 align-items: stretch;
+            }
+            .header-table > div {
+                text-align: center;
             }
             .btn-group {
                 flex-direction: column;
@@ -196,20 +226,22 @@
                 <input type="text" id="pppoe" placeholder="Contoh: nama PPPOE" required>
             </div>
 
-            <button type="submit">Simpan Catatan Pemasangan</button>
+            <button type="submit" id="btnSubmit">Simpan Catatan Pemasangan</button>
         </form>
     </div>
 
     <!-- Tabel Data -->
     <div class="card" id="areaCetak">
         <div class="header-table">
-            <h3>Daftar Pemasangan</h3>
+            <div>
+                <h3>Daftar Pemasangan</h3>
+                <span class="counter-badge" id="totalCounter">Total: 0 Pelanggan</span>
+            </div>
             <div class="btn-group" id="tombolAksi">
                 <button type="button" class="btn-reset" id="btnReset">Reset Data Bulanan</button>
                 <button type="button" class="btn-export" id="btnExportImage">📸 Export ke Gambar</button>
             </div>
         </div>
-        <!-- Wrapper tabel yang dimodifikasi untuk fix gambar -->
         <div id="tableWrapper" style="overflow-x: auto;">
             <table id="dataTable">
                 <thead>
@@ -233,10 +265,13 @@
 
 <script>
     let dataPemasangan = JSON.parse(localStorage.getItem('catatanPemasangan')) || [];
+    let editIndex = -1;
 
     const form = document.getElementById('formPemasangan');
     const tableBody = document.getElementById('tableBody');
     const inputTanggal = document.getElementById('tanggal');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const totalCounter = document.getElementById('totalCounter'); // Elemen counter
 
     const hariIni = new Date();
     hariIni.setMinutes(hariIni.getMinutes() - hariIni.getTimezoneOffset());
@@ -244,6 +279,10 @@
 
     function renderTable() {
         tableBody.innerHTML = '';
+        
+        // Update angka counter
+        totalCounter.innerHTML = `Total: ${dataPemasangan.length} Pelanggan`;
+
         dataPemasangan.forEach((data, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -253,7 +292,12 @@
                 <td>${data.hp}</td>
                 <td>${data.alamat}</td>
                 <td><code>${data.pppoe}</code></td>
-                <td class="kolom-aksi"><button class="btn-delete" onclick="hapusData(${index})">Hapus</button></td>
+                <td class="kolom-aksi">
+                    <div class="btn-aksi">
+                        <button type="button" class="btn-edit" onclick="editData(${index})">Edit</button>
+                        <button type="button" class="btn-delete" onclick="hapusData(${index})">Hapus</button>
+                    </div>
+                </td>
             `;
             tableBody.appendChild(tr);
         });
@@ -275,7 +319,15 @@
             pppoe: document.getElementById('pppoe').value
         };
 
-        dataPemasangan.push(newData);
+        if (editIndex === -1) {
+            dataPemasangan.push(newData);
+        } else {
+            dataPemasangan[editIndex] = newData;
+            editIndex = -1;
+            btnSubmit.innerHTML = 'Simpan Catatan Pemasangan';
+            btnSubmit.style.backgroundColor = 'var(--primary-color)';
+        }
+
         localStorage.setItem('catatanPemasangan', JSON.stringify(dataPemasangan));
 
         document.getElementById('team').value = '';
@@ -287,15 +339,49 @@
         renderTable();
     });
 
+    function editData(index) {
+        const data = dataPemasangan[index];
+        
+        const parts = data.tanggal.split('/');
+        if(parts.length === 3) {
+            const hariEdit = parts[0].padStart(2, '0');
+            const bulanEdit = parts[1].padStart(2, '0');
+            const tahunEdit = parts[2];
+            inputTanggal.value = `${tahunEdit}-${bulanEdit}-${hariEdit}`;
+        }
+
+        document.getElementById('team').value = data.team;
+        document.getElementById('nama').value = data.nama;
+        document.getElementById('hp').value = data.hp;
+        document.getElementById('alamat').value = data.alamat;
+        document.getElementById('pppoe').value = data.pppoe;
+
+        editIndex = index;
+        
+        btnSubmit.innerHTML = '🔄 Update Catatan Pemasangan';
+        btnSubmit.style.backgroundColor = 'var(--info-color)';
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function hapusData(index) {
         if(confirm('Apakah Anda yakin ingin menghapus data ini?')) {
             dataPemasangan.splice(index, 1);
             localStorage.setItem('catatanPemasangan', JSON.stringify(dataPemasangan));
+            
+            if(editIndex === index) {
+                editIndex = -1;
+                btnSubmit.innerHTML = 'Simpan Catatan Pemasangan';
+                btnSubmit.style.backgroundColor = 'var(--primary-color)';
+                form.reset();
+                inputTanggal.value = hariIni.toISOString().split('T')[0];
+            }
+            
             renderTable();
         }
     }
 
-    // UPDATE: PERBAIKAN FITUR EXPORT AGAR TABEL TIDAK TERPOTONG
+    // FITUR EXPORT
     document.getElementById('btnExportImage').addEventListener('click', function() {
         if(dataPemasangan.length === 0) {
             alert('Tidak ada data untuk diekspor!');
@@ -313,11 +399,9 @@
         const areaCetak = document.getElementById('areaCetak');
         const tableWrapper = document.getElementById('tableWrapper');
 
-        // Simpan setelan awal CSS
         const originalOverflow = tableWrapper.style.overflowX;
         const originalWidth = areaCetak.style.width;
 
-        // Buka batas layar tabel sementara agar memanjang secara penuh
         tableWrapper.style.overflowX = 'visible';
         areaCetak.style.width = tableWrapper.scrollWidth + 'px'; 
 
@@ -325,7 +409,6 @@
             scale: 2,
             backgroundColor: "#ffffff"
         }).then(canvas => {
-            // Kembalikan ke tampilan normal setelah difoto
             tableWrapper.style.overflowX = originalOverflow;
             areaCetak.style.width = originalWidth;
             
@@ -343,7 +426,6 @@
             document.body.removeChild(link);
         }).catch(err => {
             alert("Terjadi kesalahan saat memproses gambar.");
-            // Pastikan jika ada error, tampilan tetap kembali normal
             tableWrapper.style.overflowX = originalOverflow;
             areaCetak.style.width = originalWidth;
             document.getElementById('tombolAksi').style.display = 'flex';
