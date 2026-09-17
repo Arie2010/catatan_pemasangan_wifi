@@ -69,6 +69,7 @@
             grid-template-columns: 1fr 1fr;
             gap: 15px;
         }
+
         button {
             background-color: var(--primary-color);
             color: white;
@@ -105,21 +106,34 @@
             margin-top: 5px;
         }
         
-        /* CSS Untuk Fitur Pencarian */
-        .search-box {
+        /* CSS Baru Untuk Fitur Pencarian 1 Baris */
+        .search-wrapper {
+            display: flex;
+            gap: 10px;
             margin-bottom: 15px;
             width: 100%;
         }
-        .search-box input {
-            width: 100%;
-            padding: 12px 15px;
+        .filter-select {
+            padding: 10px 12px;
             border: 2px solid var(--primary-color);
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
+            outline: none;
+            background-color: #e9ecef;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .search-input-box {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid var(--primary-color);
+            border-radius: 6px;
+            font-size: 13px;
             box-sizing: border-box;
             outline: none;
         }
-        .search-box input:focus {
+        .search-input-box:focus, .filter-select:focus {
             box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
         }
 
@@ -198,6 +212,9 @@
             .btn-export, .btn-reset {
                 width: 100%;
             }
+            .search-wrapper {
+                flex-direction: column; /* Membuat dropdown dan input bersusun di layar kecil */
+            }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -220,7 +237,7 @@
                 </div>
                 <div class="form-group">
                     <label for="teknisi">Nama Teknisi</label>
-                    <input type="text" id="teknisi" placeholder="Nama Teknisi" required>
+                    <input type="text" id="teknisi" placeholder="Contoh: Nama teknisi" required>
                 </div>
             </div>
             
@@ -262,9 +279,14 @@
             </div>
         </div>
 
-        <!-- Kolom Pencarian -->
-        <div class="search-box" id="areaPencarian">
-            <input type="text" id="searchInput" placeholder="🔍 Ketik nama Teknisi, Sales, atau Pelanggan untuk mencari...">
+        <!-- FITUR BARU: DROPDOWN FILTER + 1 KOTAK PENCARIAN -->
+        <div class="search-wrapper" id="areaPencarian">
+            <select id="filterKategori" class="filter-select">
+                <option value="semua">Pencarian Umum</option>
+                <option value="teknisi">Khusus Teknisi</option>
+                <option value="sales">Khusus Sales</option>
+            </select>
+            <input type="text" id="searchInput" class="search-input-box" placeholder="🔍 Ketik kata kunci di sini...">
         </div>
 
         <div id="tableWrapper" style="overflow-x: auto;">
@@ -297,7 +319,10 @@
     const inputTanggal = document.getElementById('tanggal');
     const btnSubmit = document.getElementById('btnSubmit');
     const totalCounter = document.getElementById('totalCounter'); 
+    
+    // Elemen Input Pencarian Baru
     const searchInput = document.getElementById('searchInput');
+    const filterKategori = document.getElementById('filterKategori');
 
     const hariIni = new Date();
     hariIni.setMinutes(hariIni.getMinutes() - hariIni.getTimezoneOffset());
@@ -320,24 +345,36 @@
         tableBody.innerHTML = '';
         
         const keyword = searchInput.value.toLowerCase();
+        const kategori = filterKategori.value;
 
         let dataTampil = dataPemasangan.map((data, index) => {
             return { ...data, indexAsli: index };
         });
 
-        // Proses filtering (Pencarian)
+        // Proses filtering
         if (keyword) {
             dataTampil = dataTampil.filter(data => {
-                // Support data lama yang masih pakai property "team"
                 const namaTeknisi = (data.teknisi || data.team || '').toLowerCase();
                 const namaSales = (data.sales || '').toLowerCase();
-                
-                return namaTeknisi.includes(keyword) || 
-                       namaSales.includes(keyword) ||
-                       data.nama.toLowerCase().includes(keyword) || 
-                       data.alamat.toLowerCase().includes(keyword);
+                const namaUmum = data.nama.toLowerCase();
+                const alamatUmum = data.alamat.toLowerCase();
+
+                if (kategori === 'teknisi') {
+                    // Hanya cari di kolom teknisi
+                    return namaTeknisi.includes(keyword);
+                } else if (kategori === 'sales') {
+                    // Hanya cari di kolom sales
+                    return namaSales.includes(keyword);
+                } else {
+                    // Cari di semua kolom (Pencarian Umum)
+                    return namaTeknisi.includes(keyword) || 
+                           namaSales.includes(keyword) ||
+                           namaUmum.includes(keyword) || 
+                           alamatUmum.includes(keyword);
+                }
             });
-            totalCounter.innerHTML = `Pencarian: ${dataTampil.length} Pelanggan`;
+
+            totalCounter.innerHTML = `Hasil Filter: ${dataTampil.length} Pelanggan`;
             totalCounter.style.backgroundColor = 'var(--warning-color)';
             totalCounter.style.color = '#000';
         } else {
@@ -348,7 +385,6 @@
 
         // Render baris tabel
         dataTampil.forEach((data) => {
-            // Backup data lama agar tidak error
             const teksTeknisi = data.teknisi || data.team || '-';
             const teksSales = data.sales || '-';
             
@@ -371,7 +407,9 @@
         });
     }
 
+    // Jalankan renderTable saat mengetik di input atau saat mengubah pilihan dropdown
     searchInput.addEventListener('input', renderTable);
+    filterKategori.addEventListener('change', renderTable);
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -422,7 +460,6 @@
             inputTanggal.value = `${tahunEdit}-${bulanEdit}-${hariEdit}`;
         }
 
-        // Support data lama (fallback ke data.team)
         document.getElementById('teknisi').value = data.teknisi || data.team || '';
         document.getElementById('sales').value = data.sales || '';
         document.getElementById('nama').value = data.nama || '';
@@ -488,7 +525,7 @@
             areaCetak.style.width = originalWidth;
             
             document.getElementById('tombolAksi').style.display = 'flex';
-            document.getElementById('areaPencarian').style.display = 'block';
+            document.getElementById('areaPencarian').style.display = 'flex'; 
             semuaKolomAksi.forEach(el => el.style.display = '');
             btnExport.innerHTML = teksAsli;
 
@@ -505,7 +542,7 @@
             tableWrapper.style.overflowX = originalOverflow;
             areaCetak.style.width = originalWidth;
             document.getElementById('tombolAksi').style.display = 'flex';
-            document.getElementById('areaPencarian').style.display = 'block';
+            document.getElementById('areaPencarian').style.display = 'flex';
             semuaKolomAksi.forEach(el => el.style.display = '');
             btnExport.innerHTML = teksAsli;
         });
@@ -524,6 +561,8 @@
             localStorage.removeItem('catatanPemasangan');
             
             searchInput.value = '';
+            filterKategori.value = 'semua';
+            
             renderTable();
             alert('Data berhasil di-reset. Siap untuk catatan bulan baru!');
         }
